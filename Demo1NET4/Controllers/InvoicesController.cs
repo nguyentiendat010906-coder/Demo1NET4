@@ -435,6 +435,52 @@ namespace Demo1NET4.Controllers
             return Ok();
         }
 
+
+        [HttpDelete]
+        [Route("{id:int}")]
+        public IHttpActionResult DeleteInvoice(int id)
+        {
+            try
+            {
+                var invoice = _context.Invoices
+                    .Include(i => i.InvoiceDetails)
+                    .Include(i => i.Table)
+                    .FirstOrDefault(i => i.Id == id);
+
+                if (invoice == null)
+                    return NotFound();
+
+                // Xóa tất cả invoice details trước
+                if (invoice.InvoiceDetails != null && invoice.InvoiceDetails.Any())
+                {
+                    _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
+                }
+
+                // Nếu có bàn, cập nhật trạng thái bàn về empty
+                if (invoice.Table != null)
+                {
+                    invoice.Table.Status = "empty";
+                    invoice.Table.CurrentInvoiceId = null;
+                }
+
+                // Xóa invoice
+                _context.Invoices.Remove(invoice);
+                _context.SaveChanges();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Invoice deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Delete Invoice Error: {ex.Message}");
+                return InternalServerError(ex);
+            }
+        }
+
+
         #endregion
 
         #region Helper Methods
